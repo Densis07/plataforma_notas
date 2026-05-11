@@ -1,12 +1,10 @@
 return json.loads(data)
     except Exception as e:
         return None
-
 def generar_secuencia_meduca(tema, grado, materia, api_key):
     """Genera secuencia didáctica de 40 min con formato obligatorio MEDUCA 2014"""
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
-    
     prompt = f"""
     Eres un experto en el currículo de Panamá (MEDUCA 2014). Genera una secuencia didáctica para:
     Tema: {tema} | Grado: {grado} | Asignatura: {materia}.
