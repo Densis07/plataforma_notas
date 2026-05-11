@@ -1,5 +1,7 @@
 streamlit
-streamlit-authenticator
+streamlit-authenticator==0.3.1
 google-generativeai
-pandas y plotly
+pandas
+plotly
 Pillow
+python-dotenv
