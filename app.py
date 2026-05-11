@@ -1,157 +1,170 @@
-return json.loads(data)
-    except Exception as e:
-        return None
-def generar_secuencia_meduca(tema, grado, materia, api_key):
-    """Genera secuencia didáctica de 40 min con formato obligatorio MEDUCA 2014"""
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
-    prompt = f"""
-    Eres un experto en el currículo de Panamá (MEDUCA 2014). Genera una secuencia didáctica para:
-    Tema: {tema} | Grado: {grado} | Asignatura: {materia}.
-    
-    ESTRUCTURA OBLIGATORIA:
-    1. Objetivos de Aprendizaje.
-    2. Metas e Indicadores de Logro.
-    3. Aprendizajes Fundamentales (DFA).
-    4. Actividades detalladas (Día 1, Día 2, Día 3, Día 4, Día 5) separadas visualmente.
-    5. Cuadro de Contenidos:
-       - CONCEPTUAL
-       - PROCEDIMENTAL
-       - ACTITUDINAL
-    Los párrafos deben ser fluidos, sin errores de símbolos y con una estética profesional para imprimir.
-    """
-    try:
-        return model.generate_content(prompt).text
-    except:
-        return "Error en la conexión con la IA. Verifique su API Key."
+import streamlit as st
+import streamlit_authenticator as stauth
+import google.generativeai as genai
+import pandas as pd
+import plotly.express as px
+import json
+from datetime import datetime
+from PIL import Image
+import io
 
-# ==============================================================================
-# 4. NAVEGACIÓN Y PERFILES
-# ==============================================================================
+# --- 1. CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="SISTEMA DE NOTAS VISIÓN 2026", layout="wide")
+
+# --- 2. ESTILO VISUAL (NEÓN / DARK MODE) ---
+st.markdown("""
+    <style>
+    .stApp { background: radial-gradient(circle at top right, #05162a, #000000); color: #e6f1ff; }
+    .main-header { 
+        background: linear-gradient(135deg, rgba(0, 242, 255, 0.1) 0%, rgba(10, 25, 47, 0.9) 100%);
+        backdrop-filter: blur(15px); border: 1px solid rgba(0, 242, 255, 0.4); 
+        padding: 30px; border-radius: 20px; text-align: center; margin-bottom: 30px;
+    }
+    .data-card {
+        background: rgba(255, 255, 255, 0.05); border-radius: 12px;
+        padding: 20px; border-left: 5px solid #00f2ff; margin-bottom: 20px;
+    }
+    .stNumberInput input { background-color: #0a192f !important; color: #00f2ff !important; font-weight: bold; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 3. SEGURIDAD Y USUARIOS ---
+# Admin: Marquelis | Docente: Docente1
+usuarios = {
+    "usernames": {
+        "Marquelis": {"name": "MARQUELIS CARVAJAL", "password": "marqueliscarvajal9@gmail.com"},
+        "Docente1": {"name": "DOCENTE MULTI-GRADO", "password": "densis07"}
+    }
+}
+
+# Configuración del autenticador
+auth = stauth.Authenticate(usuarios, "vision_2026_auth", "secret_key_123", cookie_expiry_days=30)
+
+# Base de datos persistente en la sesión
+if 'db_notas' not in st.session_state:
+    st.session_state.db_notas = []
+
+# --- 4. MOTOR DE IA (MODELS[0]) ---
+MODELO_TARGET = 'gemini-2.5-flash-preview-09-2025'
+
+def leer_lista_estudiantes(img_bytes, api_key):
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(MODELO_TARGET)
+        img = Image.open(io.BytesIO(img_bytes))
+        prompt = "Analiza esta lista. Extrae Cédula y Nombre Completo. Responde solo con JSON: [{'Cedula': '...', 'Nombre': '...'}]"
+        response = model.generate_content([prompt, img])
+        # Limpieza de la respuesta para asegurar JSON puro
+        clean_json = response.text.strip().replace("```json", "").replace("```", "")
+        return json.loads(clean_json)
+    except Exception as e:
+        st.error(f"Error de IA: {str(e)}")
+        return None
+
+# --- 5. INTERFAZ Y NAVEGACIÓN ---
 with st.sidebar:
-    st.markdown("### 🏫 ACCESO AL PORTAL")
-    perfil_acceso = st.radio("Identificarse como:", ["Padre de Familia", "Personal Administrativo/Docente"])
+    st.title("VISIÓN 2026")
+    rol = st.radio("Módulo de acceso:", ["Padre de Familia", "Acceso Docente/Admin"])
     st.divider()
 
-# --- VISTA: PADRE DE FAMILIA ---
-if perfil_acceso == "Padre de Familia":
-    st.markdown('<div class="main-header"><h1>Portal de Consulta para Padres</h1><p>Sistema Académico Visión 2026</p></div>', unsafe_allow_html=True)
-    st.info("💡 Ingrese la Cédula de su acudido para visualizar sus notas y progreso actual.")
+if rol == "Padre de Familia":
+    st.markdown('<div class="main-header"><h1>Portal de Padres de Familia</h1></div>', unsafe_allow_html=True)
+    ced_buscar = st.text_input("Ingrese la Cédula del Estudiante para consultar:")
     
-    ced_input = st.text_input("Cédula del Estudiante (Ej: 8-000-0000):")
-    
-    if ced_input:
-        registros = [r for r in st.session_state.db_global if r['Cedula'] == ced_input]
+    if ced_buscar:
+        registros = [n for n in st.session_state.db_notas if n['Cedula'] == ced_buscar]
         if registros:
-            st.success(f"Se encontraron {len(registros)} registros para esta identificación.")
-            for r in registros:
+            for n in registros:
                 st.markdown(f"""
-                <div class="parent-card">
-                    <div style="float: right;"><span class="grade-badge">{r['Final']}</span></div>
-                    <h3>{r['Nombre']}</h3>
-                    <p><b>Grado:</b> {r['Grado']} | <b>Materia:</b> {r['Materia']}</p>
-                    <p><b>Docente:</b> {r['Docente']}</p>
-                    <hr style="border-color: rgba(0,242,255,0.2)">
-                    <p style="font-style: italic; color: #00f2ff;">Estatus Académico: {r.get('Obs', 'Actualización constante.')}</p>
-                    <p style="font-size: 0.8em; color: #888;">Fecha de Registro: {r['Fecha']}</p>
+                <div class="data-card">
+                    <h3 style="color:#00f2ff;">{n['Nombre']}</h3>
+                    <p><b>Asignatura:</b> {n['Materia']} | <b>Grado:</b> {n['Grado']}</p>
+                    <p style="font-size: 2rem; color: #00f2ff; text-align: right;"><b>NOTA: {n['Nota']}</b></p>
+                    <p style="font-size: 0.8rem; text-align: right;">Registrado el {n['Fecha']}</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
-            df_hist = pd.DataFrame(registros)
-            fig_hist = px.bar(df_hist, x='Materia', y='Final', color='Final', title="Rendimiento por Asignatura")
-            st.plotly_chart(fig_hist, use_container_width=True)
         else:
-            st.warning("Cédula no encontrada en el sistema actual.")
+            st.warning("No se encontró información para la cédula indicada.")
 
-# --- VISTA: DOCENTE / ADMINISTRATIVO (DENSIS) ---
 else:
-    name, status, username = auth.login(location='main')
-
-    if status:
-        st.markdown(f'<div class="main-header"><h1>Gestión Académica Visión 2026</h1><p>Bienvenida Directora {name}</p></div>', unsafe_allow_html=True)
-
+    # Autenticación para Personal Docente y Administrativo
+    name, authentication_status, username = auth.login("Login", "main")
+    
+    if authentication_status:
+        st.markdown(f'<div class="main-header"><h1>Gestión Académica - {name}</h1></div>', unsafe_allow_html=True)
+        
         with st.sidebar:
-            st.markdown("### ⚙️ CONFIGURACIÓN")
-            api_key = st.text_input("Google AI API Key:", type="password")
-            
-            # Gestión de tiempos
-            if username != "Densis":
-                if 't_exp' not in st.session_state: st.session_state.t_exp = datetime.now() + timedelta(minutes=40)
-                t_rem = st.session_state.t_exp - datetime.now()
-                st.warning(f"⏳ Tiempo de Planificación: {int(max(0, t_rem.total_seconds() // 60))} min")
-            else:
-                st.info("👑 Densis: Acceso Administrativo Ilimitado")
-            
+            key_ai = st.text_input("Configurar Google AI API Key:", type="password")
+            if username == "Marquelis":
+                st.success("Acceso Total: Administradora")
             auth.logout('Cerrar Sesión', 'sidebar')
 
-        if not api_key:
-            st.error("📢 Ingrese su API Key para habilitar la Visión IA y Planificación.")
+        if not key_ai:
+            st.warning("⚠️ Ingrese su API Key en el menú lateral para activar el escaneo por IA.")
 
-        tabs = st.tabs(["📸 CARGA DE LISTAS (IA)", "📝 SECUENCIA DIDÁCTICA", "📈 DASHBOARD DENSIS"])
+        tab_carga, tab_notas, tab_admin = st.tabs(["📥 Registro Estudiantes", "📝 Calificar", "📊 Dashboard Admin"])
 
-        # TAB 1: CARGA VISUAL (PARA LA IMAGEN DE EXCEL)
-        with tabs[0]:
-            st.subheader("Importación Visual de Alumnos")
-            st.write("Suba la captura de pantalla de su lista de Excel para procesar datos automáticamente.")
-            
+        with tab_carga:
+            st.subheader("Carga de Datos")
             c1, c2 = st.columns(2)
             with c1:
-                g_sel = st.selectbox("Asignar Grado:", ["K"] + [f"{i}º" for i in range(1, 13)])
-                m_sel = st.selectbox("Asignatura:", ["Matemáticas", "Español", "Ciencias", "Inglés", "Física", "Historia"])
-                n_ini = st.number_input("Nota Promedio Inicial:", 1.0, 5.0, 3.0)
+                grado = st.selectbox("Grado:", ["K"] + [f"{i}º" for i in range(1, 13)])
+                materia = st.selectbox("Asignatura:", ["Español", "Matemáticas", "Ciencias", "Inglés", "Sociales", "Física", "Química"])
             with c2:
-                img_up = st.file_uploader("Subir Imagen del Listado:", type=['png', 'jpg', 'jpeg'])
+                tipo_carga = st.radio("Método:", ["Escaneo IA (Foto)", "Manual"])
 
-            if img_up and api_key:
-                if st.button("🚀 Iniciar Reconocimiento IA"):
-                    with st.spinner("Procesando nombres y cédulas con Visión Artificial..."):
-                        datos = motor_ia_vision(img_up.getvalue(), api_key)
-                        if datos:
-                            for est in datos:
-                                st.session_state.db_global.append({
-                                    "Cedula": est["Cedula"], "Nombre": est["Nombre"],
-                                    "Grado": g_sel, "Materia": m_sel, "Final": n_ini,
-                                    "Docente": name, "Fecha": datetime.now().strftime('%d/%m/%Y'),
-                                    "Obs": "Validación visual exitosa."
+            if tipo_carga == "Escaneo IA (Foto)":
+                foto = st.file_uploader("Subir foto de la lista escolar:", type=['png', 'jpg', 'jpeg'])
+                if foto and key_ai and st.button("🚀 Iniciar Escaneo"):
+                    with st.spinner("La IA está procesando la imagen..."):
+                        alumnos = leer_lista_estudiantes(foto.getvalue(), key_ai)
+                        if alumnos:
+                            for a in alumnos:
+                                st.session_state.db_notas.append({
+                                    "Cedula": a["Cedula"], "Nombre": a["Nombre"],
+                                    "Grado": grado, "Materia": materia, "Nota": 3.0,
+                                    "Docente": name, "Fecha": datetime.now().strftime("%d/%m/%Y")
                                 })
-                            st.balloons()
-                            st.success(f"¡Éxito! Se registraron {len(datos)} estudiantes.")
-                        else:
-                            st.error("Error al leer la imagen. Verifique la calidad o el formato.")
-
-        # TAB 2: PLANIFICACIÓN (DENSIS MASTER)
-        with tabs[1]:
-            st.subheader("Generador de Secuencias (Formato MEDUCA)")
-            tema_txt = st.text_input("Tema a Planificar:")
-            if st.button("🪄 Generar Estructura Académica"):
-                if api_key and tema_txt:
-                    with st.spinner("Construyendo contenidos Conceptual, Procedimental y Actitudinal..."):
-                        plan_meduca = generar_secuencia_meduca(tema_txt, g_sel, m_sel, api_key)
-                        st.markdown(f'<div class="sequence-block">{plan_meduca}</div>', unsafe_allow_html=True)
-
-        # TAB 3: DASHBOARD ADMINISTRATIVO (DENSIS)
-        with tabs[2]:
-            if username == "Densis":
-                st.subheader("Analítica Institucional Visión 2026")
-                if st.session_state.db_global:
-                    df = pd.DataFrame(st.session_state.db_global)
-                    
-                    k1, k2, k3 = st.columns(3)
-                    k1.metric("Promedio Institucional", round(df['Final'].mean(), 2))
-                    k2.metric("Alumnos Registrados", len(df['Cedula'].unique()))
-                    k3.metric("Grados Cubiertos", df['Grado'].nunique())
-                    
-                    st.divider()
-                    
-                    fig_rend = px.box(df, x='Grado', y='Final', color='Materia', title="Rendimiento Académico Global")
-                    st.plotly_chart(fig_rend, use_container_width=True)
-                    
-                    st.markdown("#### Alerta de Rendimiento (Debajo de 3.0)")
-                    st.dataframe(df[df['Final'] < 3.0], use_container_width=True)
-                else:
-                    st.info("Sin datos para analizar. Los docentes deben subir listas primero.")
+                            st.success(f"Cargados {len(alumnos)} alumnos correctamente.")
             else:
-                st.warning("⚠️ Acceso exclusivo para la Directora Densis Carvajal.")
+                with st.form("manual_form", clear_on_submit=True):
+                    ced_m = st.text_input("Cédula:")
+                    nom_m = st.text_input("Nombre Completo:")
+                    not_m = st.number_input("Nota Inicial:", 1.0, 5.0, 3.0, 0.1)
+                    if st.form_submit_button("Guardar en Sistema"):
+                        st.session_state.db_notas.append({
+                            "Cedula": ced_m, "Nombre": nom_m, "Grado": grado,
+                            "Materia": materia, "Nota": not_m, "Docente": name,
+                            "Fecha": datetime.now().strftime("%d/%m/%Y")
+                        })
+                        st.success("Alumno registrado.")
 
-elif status is False:
-    st.error("Credenciales incorrectas.")
+        with tab_notas:
+            st.subheader("Control de Calificaciones")
+            if st.session_state.db_notas:
+                for i, row in enumerate(st.session_state.db_notas):
+                    with st.expander(f"👤 {row['Nombre']} ({row['Materia']})"):
+                        nueva_n = st.slider("Asignar Calificación:", 1.0, 5.0, float(row['Nota']), 0.1, key=f"edit_{i}")
+                        if st.button("Actualizar", key=f"btn_{i}"):
+                            st.session_state.db_notas[i]['Nota'] = nueva_n
+                            st.rerun()
+            else:
+                st.info("No hay alumnos registrados aún.")
+
+        with tab_admin:
+            if username == "Marquelis":
+                st.subheader("Reporte General del Centro")
+                if st.session_state.db_notas:
+                    df = pd.DataFrame(st.session_state.db_notas)
+                    st.metric("Población Estudiantil", len(df))
+                    st.plotly_chart(px.bar(df, x="Nombre", y="Nota", color="Materia", barmode="group", title="Rendimiento por Estudiante"), use_container_width=True)
+                    st.dataframe(df, use_container_width=True)
+                else:
+                    st.info("Esperando registros para generar estadísticas.")
+            else:
+                st.error("🔒 Área exclusiva para la Dirección (Marquelis).")
+
+    elif authentication_status == False:
+        st.error("Usuario o contraseña incorrectos.")
+    elif authentication_status == None:
+        st.info("Por favor, inicie sesión.")
