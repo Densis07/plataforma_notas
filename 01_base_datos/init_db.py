@@ -4,59 +4,48 @@ import sqlite3
 conn = sqlite3.connect("notas.db")
 c = conn.cursor()
 
-# Crear tablas
-c.execute("""CREATE TABLE IF NOT EXISTS Estudiantes (
-    cedula TEXT PRIMARY KEY,
-    nombre TEXT,
-    grado TEXT
-)""")
+print("🔎 Verificando base de datos...\n")
 
-c.execute("""CREATE TABLE IF NOT EXISTS Materias (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT
-)""")
+# Listar tablas
+c.execute("SELECT name FROM sqlite_master WHERE type='table';")
+tablas = c.fetchall()
+print("Tablas encontradas:", tablas)
 
-c.execute("""CREATE TABLE IF NOT EXISTS Notas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cedula_estudiante TEXT,
-    id_materia INTEGER,
-    fecha TEXT,
-    tema TEXT,
-    nota REAL,
-    apreciacion REAL,
-    docente TEXT
-)""")
+# Verificar contenido de Materias
+print("\n📚 Materias registradas:")
+try:
+    c.execute("SELECT * FROM Materias;")
+    for fila in c.fetchall():
+        print(fila)
+except Exception as e:
+    print("⚠️ Error al consultar Materias:", e)
 
-c.execute("""CREATE TABLE IF NOT EXISTS Docentes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT,
-    materia TEXT
-)""")
+# Verificar contenido de Estudiantes
+print("\n👨‍🎓 Estudiantes registrados:")
+try:
+    c.execute("SELECT * FROM Estudiantes;")
+    for fila in c.fetchall():
+        print(fila)
+except Exception as e:
+    print("⚠️ Error al consultar Estudiantes:", e)
 
-# Poblar tabla de estudiantes
-estudiantes = [
-    ("8-123-456", "Juan Pérez", "7°A"),
-    ("8-789-012", "María Gómez", "7°A"),
-    ("8-345-678", "Carlos Rodríguez", "8°B"),
-    ("8-901-234", "Ana Martínez", "8°B")
-]
-c.executemany("INSERT OR IGNORE INTO Estudiantes VALUES (?, ?, ?)", estudiantes)
+# Verificar contenido de Docentes
+print("\n👩‍🏫 Docentes registrados:")
+try:
+    c.execute("SELECT * FROM Docentes;")
+    for fila in c.fetchall():
+        print(fila)
+except Exception as e:
+    print("⚠️ Error al consultar Docentes:", e)
 
-# Poblar tabla de materias
-materias = [("Matemáticas",), ("Ciencias",), ("Español",), ("Historia",)]
-c.executemany("INSERT OR IGNORE INTO Materias (nombre) VALUES (?)", materias)
+# Verificar si hay notas
+print("\n📝 Notas registradas:")
+try:
+    c.execute("SELECT * FROM Notas;")
+    for fila in c.fetchall():
+        print(fila)
+except Exception as e:
+    print("⚠️ Error al consultar Notas:", e)
 
-# Poblar tabla de docentes
-docentes = [
-    ("Prof. López", "Matemáticas"),
-    ("Prof. Sánchez", "Ciencias"),
-    ("Prof. Torres", "Español"),
-    ("Prof. Díaz", "Historia")
-]
-c.executemany("INSERT OR IGNORE INTO Docentes (nombre, materia) VALUES (?, ?)", docentes)
-
-conn.commit()
 conn.close()
-
-print("Base de datos inicializada con estudiantes, materias y docentes.")
-
+print("\n✅ Verificación completada.")
