@@ -1,1 +1,62 @@
+import sqlite3
+
+# Conexión a la base de datos
+conn = sqlite3.connect("notas.db")
+c = conn.cursor()
+
+# Crear tablas
+c.execute("""CREATE TABLE IF NOT EXISTS Estudiantes (
+    cedula TEXT PRIMARY KEY,
+    nombre TEXT,
+    grado TEXT
+)""")
+
+c.execute("""CREATE TABLE IF NOT EXISTS Materias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT
+)""")
+
+c.execute("""CREATE TABLE IF NOT EXISTS Notas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cedula_estudiante TEXT,
+    id_materia INTEGER,
+    fecha TEXT,
+    tema TEXT,
+    nota REAL,
+    apreciacion REAL,
+    docente TEXT
+)""")
+
+c.execute("""CREATE TABLE IF NOT EXISTS Docentes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT,
+    materia TEXT
+)""")
+
+# Poblar tabla de estudiantes
+estudiantes = [
+    ("8-123-456", "Juan Pérez", "7°A"),
+    ("8-789-012", "María Gómez", "7°A"),
+    ("8-345-678", "Carlos Rodríguez", "8°B"),
+    ("8-901-234", "Ana Martínez", "8°B")
+]
+c.executemany("INSERT OR IGNORE INTO Estudiantes VALUES (?, ?, ?)", estudiantes)
+
+# Poblar tabla de materias
+materias = [("Matemáticas",), ("Ciencias",), ("Español",), ("Historia",)]
+c.executemany("INSERT OR IGNORE INTO Materias (nombre) VALUES (?)", materias)
+
+# Poblar tabla de docentes
+docentes = [
+    ("Prof. López", "Matemáticas"),
+    ("Prof. Sánchez", "Ciencias"),
+    ("Prof. Torres", "Español"),
+    ("Prof. Díaz", "Historia")
+]
+c.executemany("INSERT OR IGNORE INTO Docentes (nombre, materia) VALUES (?, ?)", docentes)
+
+conn.commit()
+conn.close()
+
+print("Base de datos inicializada con estudiantes, materias y docentes.")
 
