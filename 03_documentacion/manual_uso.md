@@ -1,0 +1,36 @@
+# 📘 Manual de uso de la Plataforma Académica
+
+## 👩‍🏫 Panel Docente
+- Acceso: en la barra lateral aparece el título “Panel Docente”.
+- Registro de notas:
+  1. Ingresa la cédula del estudiante.
+  2. Escribe la materia.
+  3. Selecciona la fecha de la actividad.
+  4. Ingresa el tema de la actividad.
+  5. Selecciona la nota (escala 1–5).
+  6. Selecciona la apreciación (escala 1–5).
+  7. Ingresa tu nombre como docente.
+  8. Presiona Guardar nota.
+- Confirmación: aparece un mensaje ✅ indicando que la nota fue guardada correctamente.
+- Recomendación: registrar notas diariamente para mantener actualizado el historial del estudiante.
+
+## 👨‍👩‍👧 Panel Padres
+- Acceso: en la pantalla principal aparece el título “Consulta de notas”.
+- Ingreso de cédula: escribe la cédula del estudiante en el campo correspondiente.
+- Visualización:
+  - Se muestra una tabla con fecha, tema, materia, nota, apreciación y docente.
+  - Se despliega un gráfico de desempeño con la evolución de notas y apreciaciones.
+- Promedios y alertas:
+  - El sistema calcula automáticamente el promedio de notas y apreciaciones.
+  - Si alguno baja de 3.0, aparece una alerta ⚠️ indicando riesgo académico.
+
+## 🛠️ Procedimientos técnicos
+- Inicialización: ejecutar `python 01_base_datos/init_db.py` para crear la base de datos.
+- Ejecución: correr la aplicación con `streamlit run 02_app/app.py`.
+- Respaldo: realizar copias periódicas del archivo `notas.db`.
+- Actualización: los docentes pueden añadir nuevas materias en la BD si es necesario.
+
+## 🎯 Buenas prácticas
+- Docentes: registrar notas y apreciaciones de manera objetiva y constante.
+- Padres: revisar semanalmente el desempeño del estudiante.
+- Administración: mantener la BD organizada y actualizada.
